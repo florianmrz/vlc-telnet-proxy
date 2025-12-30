@@ -1,0 +1,23 @@
+{
+  "name": "vlc-telnet-proxy",
+  "type": "module",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node --env-file=.env index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "got": "^14.6.6",
+    "telnet-client": "^2.2.9"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@typescript/native-preview": "^7.0.0-dev.20251230.1",
+    "prettier": "^3.7.4"
+  }
+}
