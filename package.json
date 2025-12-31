@@ -13,6 +13,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "dotenv": "^17.2.3",
     "got": "^14.6.6",
     "telnet-client": "^2.2.9"
   },

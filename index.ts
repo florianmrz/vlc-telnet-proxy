@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import { Telnet } from 'telnet-client';
 import got from 'got';
 import { readdir, writeFile } from 'node:fs/promises';
