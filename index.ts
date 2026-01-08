@@ -1,12 +1,10 @@
 import 'dotenv/config';
-import { Telnet } from 'telnet-client';
+import { Telnet, type SendOptions } from 'telnet-client';
 import got from 'got';
 import { readdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 
 type MediaState = 'playing' | 'stopped';
-
-let currentState: MediaState = 'stopped';
 
 async function getHomeAssistantEntityState(): Promise<MediaState> {
   const { HOME_ASSISTANT_BASE_URL, HOME_ASSISTANT_ENTITY_ID, HOME_ASSISTANT_TOKEN } = process.env;
@@ -44,9 +42,16 @@ async function sendVLCTelnetCommand(command: string) {
   // Login using password (this is done manually as the "password" option does not work properly)
   await connection.send(VLC_TELNET_PASSWORD);
 
-  await connection.send(command);
+  let waitFor: SendOptions['waitFor'] = false;
+  if (command === 'is_playing') {
+    // Wait for the actual command response
+    waitFor = />\s[01]/;
+  }
+  const res = await connection.send(command, { waitFor });
 
   await connection.destroy();
+
+  return res;
 }
 
 /**
@@ -89,18 +94,22 @@ async function stopMusic() {
   await sendVLCTelnetCommand('stop');
 }
 
+async function getVLCState(): Promise<MediaState> {
+  const res = await sendVLCTelnetCommand('is_playing');
+  return res.includes('> 1') ? 'playing' : 'stopped';
+}
+
 async function main() {
-  const state = await getHomeAssistantEntityState();
-  console.log(`Current Home Assistant state: ${state}`);
+  const haState = await getHomeAssistantEntityState();
+  const vlcState = await getVLCState();
+  console.log(`Current states: HA [${haState}], VLC [${vlcState}]`);
 
-  if (state !== currentState) {
-    if (state === 'playing') {
-      await startMusic();
-    } else {
-      await stopMusic();
-    }
-
-    currentState = state;
+  if (haState === 'playing' && vlcState === 'stopped') {
+    console.log('Starting music playback...');
+    await startMusic();
+  } else if (haState === 'stopped' && vlcState === 'playing') {
+    console.log('Stopping music playback...');
+    await stopMusic();
   }
 }
 
