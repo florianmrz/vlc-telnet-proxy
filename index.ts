@@ -3,6 +3,29 @@ import { Telnet, type SendOptions } from 'telnet-client';
 import got from 'got';
 import { readdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import winston from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
+
+
+// Configure logger with file rotation
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.printf(({ timestamp, level, message }) => `${timestamp} [${level.toUpperCase()}] ${message}`)
+  ),
+  transports: [
+    // Console output
+    new winston.transports.Console(),
+    // Rotating file transport
+    new DailyRotateFile({
+      filename: './logs/%DATE%.log',
+      datePattern: 'YYYY-MM-DD',
+      maxSize: '20m',
+      maxFiles: '7d',
+    }),
+  ],
+});
 
 type MediaState = 'playing' | 'stopped';
 
@@ -102,13 +125,13 @@ async function getVLCState(): Promise<MediaState> {
 async function main() {
   const haState = await getHomeAssistantEntityState();
   const vlcState = await getVLCState();
-  console.log(`Current states: HA [${haState}], VLC [${vlcState}]`);
+  logger.info(`Current states: HA [${haState}], VLC [${vlcState}]`);
 
   if (haState === 'playing' && vlcState === 'stopped') {
-    console.log('Starting music playback...');
+    logger.info('Starting music playback...');
     await startMusic();
   } else if (haState === 'stopped' && vlcState === 'playing') {
-    console.log('Stopping music playback...');
+    logger.info('Stopping music playback...');
     await stopMusic();
   }
 }
