@@ -22,7 +22,7 @@ const logger = winston.createLogger({
       filename: './logs/%DATE%.log',
       datePattern: 'YYYY-MM-DD',
       maxSize: '20m',
-      maxFiles: '7d',
+      maxFiles: '3d',
     }),
   ],
 });
@@ -123,16 +123,20 @@ async function getVLCState(): Promise<MediaState> {
 }
 
 async function main() {
-  const haState = await getHomeAssistantEntityState();
-  const vlcState = await getVLCState();
-  logger.info(`Current states: HA [${haState}], VLC [${vlcState}]`);
-
-  if (haState === 'playing' && vlcState === 'stopped') {
-    logger.info('Starting music playback...');
-    await startMusic();
-  } else if (haState === 'stopped' && vlcState === 'playing') {
-    logger.info('Stopping music playback...');
-    await stopMusic();
+  try {
+    const haState = await getHomeAssistantEntityState();
+    const vlcState = await getVLCState();
+    logger.info(`Current states: HA [${haState}], VLC [${vlcState}]`);
+  
+    if (haState === 'playing' && vlcState === 'stopped') {
+      logger.info('Starting music playback...');
+      await startMusic();
+    } else if (haState === 'stopped' && vlcState === 'playing') {
+      logger.info('Stopping music playback...');
+      await stopMusic();
+    }
+  } catch (error) {
+    logger.error(`Error: ${(error as Error).message}`);
   }
 }
 
