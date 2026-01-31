@@ -32,3 +32,10 @@ The service will:
 - Poll Home Assistant every X seconds
 - Start music playback when entity turns "on"
 - Stop music playback when entity turns "off"
+
+## Setup
+
+This script is ran using the native Windows Task Scheduler. To set it up:
+1. Open Task Scheduler and create a new task.
+2. Set the trigger to "At startup" or as desired (in my case every minute after user login).
+3. Set the action to start the node program within the project directory to properly load env variables.

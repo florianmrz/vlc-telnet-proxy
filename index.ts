@@ -3,7 +3,28 @@ import { Telnet, type SendOptions } from 'telnet-client';
 import got from 'got';
 import { readdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import cron from 'node-cron';
+import winston from 'winston';
+import DailyRotateFile from 'winston-daily-rotate-file';
+
+// Configure logger with file rotation
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.printf(({ timestamp, level, message }) => `${timestamp} [${level.toUpperCase()}] ${message}`)
+  ),
+  transports: [
+    // Console output
+    new winston.transports.Console(),
+    // Rotating file transport
+    new DailyRotateFile({
+      filename: './logs/%DATE%.log',
+      datePattern: 'YYYY-MM-DD',
+      maxSize: '20m',
+      maxFiles: '7d',
+    }),
+  ],
+});
 
 type MediaState = 'playing' | 'stopped';
 
@@ -46,7 +67,7 @@ async function sendVLCTelnetCommand(command: string) {
   let waitFor: SendOptions['waitFor'] = false;
   if (command === 'is_playing') {
     // Wait for the actual command response
-    waitFor = />\s[01]/;
+    waitFor = /[01]\r\n/;
   }
   const res = await connection.send(command, { waitFor });
 
@@ -97,32 +118,27 @@ async function stopMusic() {
 
 async function getVLCState(): Promise<MediaState> {
   const res = await sendVLCTelnetCommand('is_playing');
-  return res.includes('> 1') ? 'playing' : 'stopped';
+  return res.includes('1') ? 'playing' : 'stopped';
 }
 
 async function main() {
   try {
     const haState = await getHomeAssistantEntityState();
     const vlcState = await getVLCState();
-    log('info', `Current states: HA [${haState}], VLC [${vlcState}]`);
+    logger.info(`Current states: HA [${haState}], VLC [${vlcState}]`);
 
     if (haState === 'playing' && vlcState === 'stopped') {
-      log('info', 'Starting music playback...');
+      logger.info('Starting music playback...');
       await startMusic();
     } else if (haState === 'stopped' && vlcState === 'playing') {
-      log('info', 'Stopping music playback...');
+      logger.info('Stopping music playback...');
       await stopMusic();
     }
   } catch (error) {
-    log('error', `Error: ${(error as Error).message}`);
+    logger.error(`Error: ${(error as Error).message}`);
   }
-}
-
-function log(type: 'info' | 'error', message: string) {
-  console.log(`${new Date().toISOString()} [${type.toUpperCase()}] - ${JSON.stringify(message)}`);
 }
 
 console.log('Starting VLC Telnet Proxy...');
 
-// Schedule cron to run every minute
-cron.schedule('* * * * *', main);
+main();
