@@ -3,6 +3,7 @@ import { Telnet, type SendOptions } from 'telnet-client';
 import got from 'got';
 import { readdir, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import cron from 'node-cron';
 
 type MediaState = 'playing' | 'stopped';
 
@@ -121,5 +122,7 @@ function log(type: 'info' | 'error', message: string) {
   console.log(`${new Date().toISOString()} [${type.toUpperCase()}] - ${JSON.stringify(message)}`);
 }
 
-main();
-setInterval(main, 3_000);
+console.log('Starting VLC Telnet Proxy...');
+
+// Schedule cron to run every minute
+cron.schedule('* * * * *', main);
